@@ -24,6 +24,7 @@ from dwave.system import LeapHybridSampler
 from dimod import BinaryQuadraticModel
 from collections import defaultdict
 from copy import deepcopy
+from neal import SimulatedAnnealingSampler
 import matplotlib
 
 try:
@@ -175,7 +176,7 @@ e_offset = (lagrange_hard_shift * n_days * workforce ** 2) + (lagrange_soft_nurs
 bqm = BinaryQuadraticModel.from_qubo(Q, offset=e_offset)
 
 print("\nSending problem to hybrid sampler...")
-sampler = LeapHybridSampler()
+sampler = SimulatedAnnealingSampler()
 results = sampler.sample(bqm, label='Example - Nurse Scheduling')
 
 # Get the results
