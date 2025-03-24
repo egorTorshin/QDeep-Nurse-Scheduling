@@ -13,36 +13,36 @@ except ImportError:
     import matplotlib.pyplot as plt
     from matplotlib.patches import Rectangle
 
-# Общие параметры модели: размер задачи
-n_nurses = 3      # число медсестер
-n_days = 11       # число дней
+# Global model parameters: problem size
+n_nurses = 3      # number of nurses
+n_days = 11       # number of days
 size = n_days * n_nurses
 
-# Параметры для жёсткого ограничения (работа в соседние дни)
+# Parameters for the hard constraint (no consecutive working days)
 a = 3.5
 
-# Параметры для ограничения "хотя бы одна медсестра в день"
+# Parameters for the hard shift constraint (at least one nurse working per day)
 lagrange_hard_shift = 1.3
 workforce = 1
 effort = 1
 
-# Параметры для мягкого ограничения (выравнивание нагрузки)
+# Parameters for the soft constraint (even workload distribution)
 lagrange_soft_nurse = 0.3
 preference = 1
 min_duty_days = int(n_days / n_nurses)
 
-# Функция для получения 1D индекса по (индекс медсестры, индекс дня)
+# Function to obtain a 1D index from (nurse index, day index)
 def get_index(nurse_index, day_index):
     return nurse_index * n_days + day_index
 
-# Обратная функция: из 1D индекса получаем (медсестра, день)
+# Inverse function: get (nurse, day) from a 1D index
 def get_nurse_and_day(index):
     nurse_index, day_index = divmod(index, n_days)
     return nurse_index, day_index
 
 print("\nBuilding binary quadratic model...")
 
-# Ограничение: одна медсестра не должна работать в два подряд идущих дня
+# Hard constraint: a nurse should not work on two consecutive days
 J = defaultdict(int)
 for nurse in range(n_nurses):
     for day in range(n_days - 1):
@@ -50,10 +50,10 @@ for nurse in range(n_nurses):
         nurse_day_2 = get_index(nurse, day + 1)
         J[nurse_day_1, nurse_day_2] = a
 
-# Формируем Q-матрицу (QUBO) на основе матрицы J
+# Build the Q-matrix (QUBO) based on matrix J
 Q = deepcopy(J)
 
-# Ограничение: хотя бы одна медсестра работает каждый день
+# Hard shift constraint: at least one nurse works each day
 for nurse in range(n_nurses):
     for day in range(n_days):
         ind = get_index(nurse, day)
@@ -66,7 +66,7 @@ for day in range(n_days):
             ind2 = get_index(nurse2, day)
             Q[ind1, ind2] += 2 * lagrange_hard_shift * effort ** 2
 
-# Ограничение: равномерное распределение рабочих дней (мягкое ограничение)
+# Soft constraint: even distribution of workdays among nurses
 for nurse in range(n_nurses):
     for day in range(n_days):
         ind = get_index(nurse, day)
@@ -79,32 +79,32 @@ for nurse in range(n_nurses):
             ind2 = get_index(nurse, day2)
             Q[ind1, ind2] += 2 * lagrange_soft_nurse * preference ** 2
 
-# Смещение энергии
+# Energy offset
 e_offset = (lagrange_hard_shift * n_days * workforce ** 2) + (lagrange_soft_nurse * n_nurses * min_duty_days ** 2)
 bqm = BinaryQuadraticModel.from_qubo(Q, offset=e_offset)
 
 print("\nSending problem to QDeepHybridSolver...")
 
-# Преобразуем BQM в QUBO-словарь и смещение
+# Convert the BQM to a QUBO dictionary and offset
 qubo, offset = bqm.to_qubo()
 
-# Преобразование QUBO-словаря в numpy-массив
+# Convert the QUBO dictionary to a numpy array
 matrix = np.zeros((size, size))
 for (i, j), value in qubo.items():
     matrix[i, j] = value
 
-# Инициализация решателя QDeepHybridSolver
+# Initialize the QDeepHybridSolver
 solver = QDeepHybridSolver()
 solver.token = "your-auth-token-here"
 
-# Решаем задачу, передавая numpy-массив
+# Solve the problem by passing the numpy array
 results = solver.solve(matrix)
 
-# Извлекаем решение (предполагается, что возвращается словарь с ключом 'sample')
+# Extract the solution (assumes the result returns a dictionary with key 'sample')
 smpl = results['sample']
 
 print("\nBuilding schedule and checking constraints...\n")
-# Формируем расписание на основе полученного решения
+# Build the schedule based on the obtained solution
 sched = [get_nurse_and_day(j) for j in range(size) if smpl.get(j, 0) == 1]
 
 def check_hard_shift_constraint(sched, n_days):
@@ -130,7 +130,7 @@ print("\tHard shift constraint:", check_hard_shift_constraint(sched, n_days))
 print("\tHard nurse constraint:", check_hard_nurse_constraint(sched, n_nurses))
 print("\tSoft nurse constraint:", check_soft_nurse_constraint(sched, n_nurses))
 
-# Построение графика расписания
+# Plot the schedule
 x, y = zip(*sched) if sched else ([], [])
 fig = plt.figure()
 ax = fig.add_subplot(111)
@@ -154,7 +154,7 @@ ax.set_xlabel("Shifts")
 ax.set_ylabel("Nurses")
 plt.savefig("schedule.png")
 
-# Вывод расписания в консоль
+# Print the schedule to the console
 print("\nSchedule:\n")
 for n in range(n_nurses - 1, -1, -1):
     str_row = ""
