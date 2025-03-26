@@ -5,6 +5,9 @@
   https://circleci.com/gh/dwave-examples/nurse-scheduling.svg?style=shield)](
   https://circleci.com/gh/dwave-examples/nurse-scheduling)
 
+# Important note
+This repository is a fork of D-Wave's original nurse-scheduling. The contributors to this fork do not claim ownership or authorship of the original codebase. All credit for the original work belongs to D-Wave Systems and its respective contributors.
+
 # Nurse Scheduling
 
 This is a demo of a nurse scheduling model developed by Ikeda, Nakamura
